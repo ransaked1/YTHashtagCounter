@@ -1,16 +1,19 @@
 import google.oauth2.credentials
 
+# Miscelaneous imports
 from pickle import load 
 from pickle import dump
 from os import path
 from time import sleep
 from re import compile as comp
 
+# Qt graphical imports
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QMovie
 from PyQt5.QtWidgets import QWidget, QLabel
 
+# Google authentication and storage imports
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -19,19 +22,21 @@ from oauth2client import tools
 from oauth2client.file import Storage
 from oauth2client import client
 
+# Client secret file name
 CLIENT_SECRETS_FILE = "client_secret.json"
 
+# YouTube API authentication macros
 SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 
-
+# get youtube api session
 def get_authenticated_service():
     credentials = None
     if path.exists('token.pickle'):
         with open('token.pickle', 'rb') as token:
             credentials = load(token)
-    #  Check if the credentials are invalid or do not exist
+    # Check if the credentials are invalid or do not exist
     if not credentials or not credentials.valid:
         # Check if the credentials have expired
         if credentials and credentials.expired and credentials.refresh_token:
@@ -46,7 +51,8 @@ def get_authenticated_service():
             dump(credentials, token)
  
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
-    
+
+# parse and return video comments from api reply
 def get_video_comments(service, **kwargs):
     comments = []
     results = service.commentThreads().list(**kwargs).execute()
@@ -67,29 +73,29 @@ def get_video_comments(service, **kwargs):
 
     return comments
 
+# loading screen animation object
 class LoadingScreen(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(42,42)
-        self.setWindowOpacity(0.4)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.CustomizeWindowHint)
+        self.setFixedSize(42,42)		#set window size
+        self.setWindowOpacity(0.4)		#set window opacity
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.CustomizeWindowHint) # remove window widgets
         
+        #setup label gif as movie
         self.label_animation = QtWidgets.QLabel(self)
-        
         self.movie = QtGui.QMovie("loading.gif", QtCore.QByteArray(), self)
-        #self.movie.setBackgroundColor(Qt.transparent)
-        #self.movie.setScaledSize(QtCore.QSize().scaled(40, 40, Qt.KeepAspectRatio))
         self.label_animation.setMovie(self.movie)
         
+        #start animation and make window visible
         self.movie.start()
-        
         self.setVisible(True)
     
+    # stop animation and close window
     def stopAnimation(self):
         self.movie.stop()
         self.close()
 
-        
+# setup UI window all made in Qt Designer        
 class Ui_frame(object):
     def setupUi(self, frame):
         frame.setObjectName("frame")
@@ -189,23 +195,28 @@ class Ui_frame(object):
         self.hash1.setText(_translate("frame", "Keyword 1:"))
         self.pushButton.setText(_translate("frame", "Count votes"))
         self.pushButton.clicked.connect(lambda: self.runCounter(frame))
-        
+    
+    # function starts when button is pressed    
     def runCounter(self, frame):
         self.pushButton.setEnabled(False)
         self.thread = CalcThread(self)
         self.thread.start()
-        
+
+# new program thread object        
 class  CalcThread(QThread):
     def __init__(self, ui):
         super().__init__()
         self.ui = ui
         
+        # start loading screen
         global loading
         loading = LoadingScreen()
-        
+    
+    # count parsed content    
     def run(self):
         skip = False
         
+        # try getting youtube video id or give error code
         try:
             url = str(self.ui.lineEdit.text())
             regex = comp(r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(watch\?v=|embed/|v/|.+\?v=)?(?P<id>[A-Za-z0-9\-=_]{11})')
@@ -216,6 +227,7 @@ class  CalcThread(QThread):
             self.ui.outputBox.append("Video URL missing or incorrect.\n")
             skip = True
         
+        # try getting video comments from API
         if not skip:
             try:
                 coms = get_video_comments(service, videoId=videoid, part='id,snippet,replies')
@@ -223,8 +235,8 @@ class  CalcThread(QThread):
                 self.ui.outputBox.append("Could not find video or connection refused. Check your internet connection or video URL.\n")
                 skip = True
         
+        # count and display votes
         if not skip:
-            print("wf?")
             name1 = str(self.ui.hashtag1In.text()).lower()
             name2 = str(self.ui.hashtag2In.text()).lower()
         
@@ -243,8 +255,8 @@ class  CalcThread(QThread):
                     hashtag2 += 1
                 
             if hashtag1 != -1:
-                try:
-                    percent1 = hashtag1 / (hashtag1 + hashtag2) * 100
+                try: # avoid division by 0
+                    percent1 = hashtag1 / (hashtag1 + hashtag2) * 100 
                 except:
                     percent1 = 0
             else:
@@ -253,7 +265,7 @@ class  CalcThread(QThread):
                 name1 = "NONE"
         
             if hashtag2 != -1:
-                try:
+                try: # avoid division by 0
                     percent2 = hashtag2 / (hashtag1 + hashtag2) * 100
                 except:
                     percent2 = 0
@@ -261,16 +273,18 @@ class  CalcThread(QThread):
                 percent2 = 0
                 hashtag2 = 0
                 name2 = "NONE"
-        
+        	
+        	#stop loading screen
             loading.stopAnimation()
         
             percent1 = "{:.2f}".format(percent1)
             percent2 = "{:.2f}".format(percent2)
         
-        
+        	# display count results
             self.ui.outputBox.append(name1 + ": " + str(hashtag1) + " (" + str(percent1) + "%)" + "\n" + name2 + 
                                   ": " + str(hashtag2) + " (" + str(percent2) + "%)" + "\n")
-            
+        
+        # if got error wait 1sec then stop animation otherwise program crashes    
         sleep(1)
         loading.stopAnimation()
         self.ui.pushButton.setEnabled(True)
@@ -279,16 +293,18 @@ class  CalcThread(QThread):
     
 if __name__ == '__main__':
     import sys
+    #initializing UI
     app = QtWidgets.QApplication(sys.argv)
     frame = QtWidgets.QFrame()
     ui = Ui_frame()
     ui.setupUi(frame)
     
+    # trying to authenticate
     try:
         service = get_authenticated_service()
     except:
         ui.outputBox.append("Failed to load a valid user session or connect to google services. Make sure you have a valid client_secret.json file and check your internet connection then restart the application.")
         ui.pushButton.setEnabled(False)
     
-    frame.show()
+    frame.show() # show UI
     sys.exit(app.exec_())

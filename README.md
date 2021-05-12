@@ -4,7 +4,7 @@ A windows app built using Python, PyQt5 and Google's YouTube API to count and co
   <img src="https://github.com/ransaked1/YTHashtagCounter/blob/master/YTHC.png" width="490" height="350">
 
 ## Download
-You can download the executable [here](https://drive.google.com/drive/folders/1YVSS4dBp868O6wx1AfmSkX1mtPUEULhB?usp=sharing)
+You can download the executable [here](https://drive.google.com/drive/folders/1YVSS4dBp868O6wx1AfmSkX1mtPUEULhB?usp=sharing).
 
 ## Built With
 * [PyQt5](https://pypi.org/project/PyQt5/) - Cross-platform GUI

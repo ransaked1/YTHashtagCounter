@@ -1,5 +1,5 @@
 # YTHashtagCounter
-A windows app built using Python, PyQt5 and Google's YouTube API to count and compare word occurences in YouTube comments. The app can also be compiled into an exe using NSIS.
+A Windows app built using Python, PyQt5 and Google's YouTube API to count and compare word occurences in YouTube comments. The app can also be compiled into an exe using NSIS.
 
   <img src="https://github.com/ransaked1/YTHashtagCounter/blob/master/YTHC.png" width="490" height="350">
 
